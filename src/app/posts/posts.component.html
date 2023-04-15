@@ -1,0 +1,20 @@
+<app-post-edit></app-post-edit>
+<div class="post-container">
+	<mat-accordion *ngIf="posts.length; else noPostsTemplate">
+		<mat-expansion-panel *ngFor="let item of posts">
+			<mat-expansion-panel-header>
+				<mat-panel-title>{{ item.postTitle }}</mat-panel-title>
+				<mat-panel-description>Panel Description</mat-panel-description>
+			</mat-expansion-panel-header>
+			{{ item.postContent }}
+			<mat-action-row>
+				<button mat-button color="primary">EDIT</button>
+				<button mat-button color="warn">DELETE</button>
+			</mat-action-row>
+		</mat-expansion-panel>
+	</mat-accordion>
+</div>
+
+<ng-template #noPostsTemplate>
+	<p class="mat-body-1 info-text">No posts added yet!</p>
+</ng-template>
