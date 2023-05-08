@@ -1,26 +1,25 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Post } from './post.model';
 import { PostsService } from './posts.service';
-import { Subscription } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 @Component({
 	selector: 'app-posts',
 	templateUrl: './posts.component.html',
 	styleUrls: ['./posts.component.scss'],
 })
-export class PostsComponent implements OnInit, OnDestroy {
-	posts: Post[] = [];
-	subscriptions: Subscription[] = [];
-	constructor(private postsService: PostsService) {}
+export class PostsComponent implements OnInit {
+	postsObs!: Observable<Post[]>;
+	private postsService = inject(PostsService);
 
 	ngOnInit(): void {
-		const postSubject: Subscription = this.postsService.postsObs.subscribe({
-			next: (response) => (this.posts = response),
-		});
-		this.subscriptions.push(postSubject);
+		this.postsService.fetchPosts();
+		this.postsObs = this.postsService.postsObs.pipe(
+			map((response) => response)
+		);
 	}
 
-	ngOnDestroy(): void {
-		this.subscriptions.forEach((sub) => sub.unsubscribe());
+	onDeletePost(postId: string) {
+		this.postsService.deletePost(postId);
 	}
 }

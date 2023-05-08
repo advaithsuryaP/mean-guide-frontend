@@ -1,1 +1,20 @@
-<mat-toolbar color="primary">Mean Start Guide</mat-toolbar>
+<mat-toolbar color="basic" class="header">
+	<span>
+		<a routerLink="/">Posts</a>
+	</span>
+
+	<span class="spacer"></span>
+
+	<ul>
+		<li>
+			<button
+				mat-stroked-button
+				color="primary"
+				routerLink="/create"
+				routerLinkActive="mat-accent"
+			>
+				Create Post
+			</button>
+		</li>
+	</ul>
+</mat-toolbar>
