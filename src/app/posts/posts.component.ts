@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { Post } from './post.model';
 import { PostsService } from './posts.service';
-import { Observable, map } from 'rxjs';
+import { PageEvent } from '@angular/material/paginator';
 
 @Component({
 	selector: 'app-posts',
@@ -9,17 +9,40 @@ import { Observable, map } from 'rxjs';
 	styleUrls: ['./posts.component.scss'],
 })
 export class PostsComponent implements OnInit {
-	postsObs!: Observable<Post[]>;
+	posts: Post[] = [];
+	pageIndex: number = 0;
+	totalPosts: number = 0;
+	postsPerPage: number = 2;
+
+	isLoading: boolean = true;
 	private postsService = inject(PostsService);
 
 	ngOnInit(): void {
-		this.postsService.fetchPosts();
-		this.postsObs = this.postsService.postsObs.pipe(
-			map((response) => response)
-		);
+		this.fetchPosts();
 	}
 
-	onDeletePost(postId: string) {
-		this.postsService.deletePost(postId);
+	private fetchPosts(): void {
+		this.isLoading = true;
+		this.postsService
+			.fetchPosts(this.pageIndex + 1, this.postsPerPage)
+			.subscribe({
+				next: (response) => {
+					this.isLoading = false;
+					this.posts = response.posts;
+					this.totalPosts = response.totalPosts;
+				},
+			});
+	}
+
+	onPageChange(event: PageEvent) {
+		this.postsPerPage = event.pageSize;
+		this.pageIndex = event.pageIndex;
+		this.fetchPosts();
+	}
+
+	onDeletePost(postId: string): void {
+		this.postsService.deletePost(postId).subscribe({
+			next: (_) => this.fetchPosts(),
+		});
 	}
 }

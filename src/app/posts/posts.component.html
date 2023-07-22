@@ -1,13 +1,13 @@
-<div
-	class="post-container"
-	*ngIf="postsObs | async as posts; else loadingSpinner"
->
+<div class="post-container" *ngIf="!isLoading; else loadingSpinner">
 	<mat-accordion *ngIf="posts.length; else noPostsTemplate">
 		<mat-expansion-panel *ngFor="let item of posts">
 			<mat-expansion-panel-header>
 				<mat-panel-title>{{ item.title }}</mat-panel-title>
 				<mat-panel-description>Panel Description</mat-panel-description>
 			</mat-expansion-panel-header>
+			<div class="post-image">
+				<img [src]="item.imagePath" [alt]="item.title" />
+			</div>
 			{{ item.content }}
 			<mat-action-row>
 				<a mat-button color="primary" [routerLink]="['/edit', item.id]">
@@ -19,6 +19,13 @@
 			</mat-action-row>
 		</mat-expansion-panel>
 	</mat-accordion>
+	<mat-paginator
+		[length]="totalPosts"
+		[pageIndex]="pageIndex"
+		[pageSize]="postsPerPage"
+		[pageSizeOptions]="[1, 2, 5, 10]"
+		(page)="onPageChange($event)"
+	></mat-paginator>
 </div>
 
 <ng-template #noPostsTemplate>

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Post } from './post.model';
-import { Observable, Subject, map } from 'rxjs';
-import { HttpClient } from '@angular/common/http';
+import { Observable, map } from 'rxjs';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Router } from '@angular/router';
 
 const POSTS_API_URL = `http://localhost:3000/api/posts`;
@@ -12,37 +12,43 @@ const POSTS_API_URL = `http://localhost:3000/api/posts`;
 export class PostsService {
 	private posts: Post[] = [];
 
-	private postsSubject = new Subject<Post[]>();
-	postsObs = this.postsSubject.asObservable();
-
 	private router = inject(Router);
 	private http = inject(HttpClient);
 
-	createPost(title: string, content: string) {
-		const newPost: Post = {
-			id: '',
-			title: title,
-			content: content,
-		};
+	createPost(title: string, content: string, image: File) {
+		const payload = new FormData();
+		payload.append('title', title);
+		payload.append('content', content);
+		payload.append('image', image, title);
 
 		this.http
-			.post<{ message: string; data: Post }>(`${POSTS_API_URL}`, newPost)
+			.post<{ message: string; post: Post }>(`${POSTS_API_URL}`, payload)
 			.subscribe({
 				next: (response) => {
-					const newPost: Post = response.data;
-					this.posts.push(newPost);
-					this.postsSubject.next([...this.posts]);
+					this.posts.push(response.post);
 					this.router.navigate(['/']);
 				},
 			});
 	}
 
-	fetchPosts(): void {
-		this.http
+	fetchPosts(
+		page: number,
+		pageSize: number
+	): Observable<{ posts: Post[]; totalPosts: number }> {
+		let queryParams = new HttpParams();
+		queryParams = queryParams.append('page', page);
+		queryParams = queryParams.append('pageSize', pageSize);
+		return this.http
 			.get<{
 				message: string;
-				data: { _id: string; title: string; content: string }[];
-			}>(`${POSTS_API_URL}`)
+				data: {
+					_id: string;
+					title: string;
+					content: string;
+					imagePath: string;
+				}[];
+				totalPosts: number;
+			}>(`${POSTS_API_URL}`, { params: queryParams })
 			.pipe(
 				map((response) => {
 					const modifiedPosts: Post[] = [];
@@ -51,17 +57,15 @@ export class PostsService {
 							id: post._id,
 							title: post.title,
 							content: post.content,
+							imagePath: post.imagePath,
 						})
 					);
-					return modifiedPosts;
+					return {
+						posts: modifiedPosts,
+						totalPosts: response.totalPosts,
+					};
 				})
-			)
-			.subscribe({
-				next: (modifiedPosts) => {
-					this.posts = modifiedPosts;
-					this.postsSubject.next([...this.posts]);
-				},
-			});
+			);
 	}
 
 	fetchPost(postId: string): Observable<Post> {
@@ -70,16 +74,31 @@ export class PostsService {
 			.pipe(map((response) => response.data));
 	}
 
-	updatePost(postId: string, title: string, content: string) {
-		const newPost: Post = {
-			id: postId,
-			title: title,
-			content: content,
-		};
+	updatePost(
+		postId: string,
+		title: string,
+		content: string,
+		image: File | string
+	) {
+		let payload: Post | FormData;
+		if (typeof image === 'object') {
+			payload = new FormData();
+			payload.append('id', postId);
+			payload.append('title', title);
+			payload.append('content', content);
+			payload.append('image', image, title);
+		} else {
+			payload = {
+				id: postId,
+				title: title,
+				content: content,
+				imagePath: image as string,
+			} as Post;
+		}
 		this.http
 			.put<{ message: string; data: Post }>(
 				`${POSTS_API_URL}/${postId}`,
-				newPost
+				payload
 			)
 			.subscribe({
 				next: (response) => {
@@ -88,26 +107,15 @@ export class PostsService {
 					);
 					if (indexToUpdate) {
 						this.posts[indexToUpdate] = response.data;
-						this.postsSubject.next([...this.posts]);
 					}
 					this.router.navigate(['/']);
 				},
 			});
 	}
 
-	deletePost(postId: string): void {
-		this.http
-			.delete<{ message: string; data: string }>(
-				`${POSTS_API_URL}/${postId}`
-			)
-			.subscribe({
-				next: (response) => {
-					const indexToBeDeleted = this.posts.findIndex(
-						(post) => post.id === response.data
-					);
-					this.posts.splice(indexToBeDeleted, 1);
-					this.postsSubject.next([...this.posts]);
-				},
-			});
+	deletePost(postId: string): Observable<{ message: string; data: string }> {
+		return this.http.delete<{ message: string; data: string }>(
+			`${POSTS_API_URL}/${postId}`
+		);
 	}
 }
